@@ -1,0 +1,57 @@
+version: 1
+default_decision: allow
+normalizers:
+  - nfkc
+  - strip_shell_quotes
+  - collapse_whitespace
+  - decode_base64
+rules:
+  - id: secrets.aws-access-key
+    applies_to: [prompt, write]
+    match:
+      kind: regex
+      field: content
+      pattern: "AKIA[0-9A-Z]{16}"
+    decision: deny
+    message: "AWS access key detected."
+  - id: secrets.high-entropy
+    applies_to: [prompt, write, shell]
+    match:
+      kind: entropy
+      field: content
+      threshold: 4.5
+      min_length: 20
+    decision: warn
+    message: "High entropy string detected; possible secret."
+  - id: paths.protected-configs
+    applies_to: [write]
+    match:
+      kind: glob
+      field: path
+      pattern: ".env*"
+    decision: deny
+    message: "Modifying environment files is blocked."
+  - id: shell.dangerous-commands
+    applies_to: [shell]
+    match:
+      kind: regex
+      field: command
+      pattern: "(rm\\s+-rf\\s+/|curl.*\\|\\s*sh|wget.*\\|\\s*sh)"
+    decision: deny
+    message: "Dangerous shell pattern detected."
+  - id: network.allowed-domains
+    applies_to: [shell]
+    match:
+      kind: domain_allowlist
+      field: command
+      allowed_domains: ["github.com", "api.github.com", "registry.npmjs.org", "pypi.org"]
+    decision: deny
+    message: "Command contains an unapproved network domain."
+  - id: size.large-write
+    applies_to: [write]
+    match:
+      kind: max_size
+      field: content
+      max_lines: 500
+    decision: warn
+    message: "Write exceeds 500 lines."

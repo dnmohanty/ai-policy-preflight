@@ -1,0 +1,247 @@
+{
+  "$defs": {
+    "DomainAllowlistMatch": {
+      "properties": {
+        "kind": {
+          "const": "domain_allowlist",
+          "title": "Kind",
+          "type": "string"
+        },
+        "field": {
+          "const": "command",
+          "title": "Field",
+          "type": "string"
+        },
+        "allowed_domains": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Domains",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "field",
+        "allowed_domains"
+      ],
+      "title": "DomainAllowlistMatch",
+      "type": "object"
+    },
+    "EntropyMatch": {
+      "properties": {
+        "kind": {
+          "const": "entropy",
+          "title": "Kind",
+          "type": "string"
+        },
+        "field": {
+          "enum": [
+            "command",
+            "content",
+            "text"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "threshold": {
+          "title": "Threshold",
+          "type": "number"
+        },
+        "min_length": {
+          "title": "Min Length",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "field",
+        "threshold",
+        "min_length"
+      ],
+      "title": "EntropyMatch",
+      "type": "object"
+    },
+    "GlobMatch": {
+      "properties": {
+        "kind": {
+          "const": "glob",
+          "title": "Kind",
+          "type": "string"
+        },
+        "field": {
+          "const": "path",
+          "title": "Field",
+          "type": "string"
+        },
+        "pattern": {
+          "title": "Pattern",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "field",
+        "pattern"
+      ],
+      "title": "GlobMatch",
+      "type": "object"
+    },
+    "MaxSizeMatch": {
+      "properties": {
+        "kind": {
+          "const": "max_size",
+          "title": "Kind",
+          "type": "string"
+        },
+        "field": {
+          "const": "content",
+          "title": "Field",
+          "type": "string"
+        },
+        "max_lines": {
+          "title": "Max Lines",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "field",
+        "max_lines"
+      ],
+      "title": "MaxSizeMatch",
+      "type": "object"
+    },
+    "RegexMatch": {
+      "properties": {
+        "kind": {
+          "const": "regex",
+          "title": "Kind",
+          "type": "string"
+        },
+        "field": {
+          "enum": [
+            "command",
+            "content",
+            "text",
+            "path"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "pattern": {
+          "title": "Pattern",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "field",
+        "pattern"
+      ],
+      "title": "RegexMatch",
+      "type": "object"
+    },
+    "Rule": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "applies_to": {
+          "items": {
+            "enum": [
+              "shell",
+              "write",
+              "prompt"
+            ],
+            "type": "string"
+          },
+          "title": "Applies To",
+          "type": "array"
+        },
+        "match": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RegexMatch"
+            },
+            {
+              "$ref": "#/$defs/GlobMatch"
+            },
+            {
+              "$ref": "#/$defs/EntropyMatch"
+            },
+            {
+              "$ref": "#/$defs/DomainAllowlistMatch"
+            },
+            {
+              "$ref": "#/$defs/MaxSizeMatch"
+            }
+          ],
+          "title": "Match"
+        },
+        "decision": {
+          "enum": [
+            "allow",
+            "warn",
+            "deny"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "applies_to",
+        "match",
+        "decision",
+        "message"
+      ],
+      "title": "Rule",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "version": {
+      "default": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "default_decision": {
+      "default": "allow",
+      "enum": [
+        "allow",
+        "warn",
+        "deny"
+      ],
+      "title": "Default Decision",
+      "type": "string"
+    },
+    "normalizers": {
+      "items": {
+        "enum": [
+          "nfkc",
+          "strip_shell_quotes",
+          "collapse_whitespace",
+          "decode_base64"
+        ],
+        "type": "string"
+      },
+      "title": "Normalizers",
+      "type": "array"
+    },
+    "rules": {
+      "items": {
+        "$ref": "#/$defs/Rule"
+      },
+      "title": "Rules",
+      "type": "array"
+    }
+  },
+  "title": "Policy",
+  "type": "object"
+}

@@ -1,0 +1,3 @@
+{"timestamp": "2026-11-06T01:43:47.589227+00:00", "action_type": "write", "decision": "deny", "matched_rule_ids": ["paths.env-files"], "action_hash": "221014ddd67ab20ce922605012ee448163e324715545b9dd7e1764cd0b6c693d"}
+{"timestamp": "2026-11-06T01:59:45.800996+00:00", "action_type": "shell", "decision": "deny", "matched_rule_ids": ["shell.dangerous-commands"], "action_hash": "825111cd628b868e64a6f41fe15b2ad899697d3c44a31bcdb8668e6786726d3e"}
+{"timestamp": "2026-11-06T01:59:46.293369+00:00", "action_type": "write", "decision": "deny", "matched_rule_ids": ["secrets.aws-access-key"], "action_hash": "24b763131f5af771bd8e3e7b544bd5564fb1285f42500ba2b1c880db22253b4a"}
