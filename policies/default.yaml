@@ -1,57 +1,136 @@
 version: 1
 default_decision: allow
 normalizers:
-  - nfkc
-  - strip_shell_quotes
   - collapse_whitespace
+  - strip_shell_quotes
   - decode_base64
 rules:
-  - id: secrets.aws-access-key
-    applies_to: [prompt, write]
-    match:
-      kind: regex
-      field: content
-      pattern: "AKIA[0-9A-Z]{16}"
-    decision: deny
-    message: "AWS access key detected."
-  - id: secrets.high-entropy
-    applies_to: [prompt, write, shell]
+  - id: secrets-entropy
+    applies_to: [shell, write, prompt]
     match:
       kind: entropy
-      field: content
-      threshold: 4.5
-      min_length: 20
-    decision: warn
-    message: "High entropy string detected; possible secret."
-  - id: paths.protected-configs
+      field: body
+      threshold: 4.2
+      min_length: 32
+    decision: deny
+    message: "High entropy string detected (possible secret)."
+
+  - id: aws-key
+    applies_to: [shell, write, prompt]
+    match:
+      kind: regex
+      field: body
+      pattern: 'AKIA[0-9A-Z]{16}'
+    decision: deny
+    message: "AWS Access Key detected."
+
+  - id: protect-env
     applies_to: [write]
     match:
       kind: glob
       field: path
-      pattern: ".env*"
+      pattern: '.env'
     decision: deny
-    message: "Modifying environment files is blocked."
-  - id: shell.dangerous-commands
+    message: "Writing to .env files is blocked."
+
+  - id: protect-github-workflows
+    applies_to: [write]
+    match:
+      kind: glob
+      field: path
+      pattern: '.github/workflows/*'
+    decision: deny
+    message: "Modifying CI workflows is blocked."
+
+  - id: protect-ssh-dir
+    applies_to: [write]
+    match:
+      kind: glob
+      field: path
+      pattern: '.ssh/*'
+    decision: deny
+    message: "Writing to .ssh directory is blocked."
+
+  - id: protect-pem-keys
+    applies_to: [write]
+    match:
+      kind: glob
+      field: path
+      pattern: '*.pem'
+    decision: deny
+    message: "Writing .pem keys is blocked."
+
+  - id: protect-id-rsa
+    applies_to: [write]
+    match:
+      kind: glob
+      field: path
+      pattern: 'id_rsa*'
+    decision: deny
+    message: "Writing private keys is blocked."
+
+  - id: warn-lockfiles-npm
+    applies_to: [write]
+    match:
+      kind: glob
+      field: path
+      pattern: 'package-lock.json'
+    decision: warn
+    message: "Modifying package-lock.json. Verify dependencies."
+
+  - id: warn-lockfiles-poetry
+    applies_to: [write]
+    match:
+      kind: glob
+      field: path
+      pattern: 'poetry.lock'
+    decision: warn
+    message: "Modifying poetry.lock. Verify dependencies."
+
+  - id: shell-rm-root
     applies_to: [shell]
     match:
       kind: regex
       field: command
-      pattern: "(rm\\s+-rf\\s+/|curl.*\\|\\s*sh|wget.*\\|\\s*sh)"
+      pattern: '\brm\b(?=[^|;&\n]*\s-[a-zA-Z]*[rR])[^|;&\n]*\s(?:/|/\*|~|~/|~/\*|\$HOME|/(?:etc|usr|bin|sbin|boot|home|var|lib|opt|root)/?)(?=\s|$|[;&|])'
     decision: deny
-    message: "Dangerous shell pattern detected."
-  - id: network.allowed-domains
+    message: "Destructive rm command blocked."
+
+  - id: shell-curl-pipe
+    applies_to: [shell]
+    match:
+      kind: regex
+      field: command
+      pattern: '\b(?:curl|wget)\b[^|;&\n]*\|\s*(?:sudo\s+)?(?:ba|z|da|k)?sh\b|\b(?:ba|z|da)?sh\s+-c\s+["'']?\$\(\s*(?:curl|wget)\b|<\(\s*(?:curl|wget)\b'
+    decision: deny
+    message: "Piping remote script to shell blocked."
+
+  - id: shell-chmod-777
+    applies_to: [shell]
+    match:
+      kind: regex
+      field: command
+      pattern: '\bchmod\s+(?:-R\s+)?777\b'
+    decision: warn
+    message: "Making files globally writable (777)."
+
+  - id: shell-git-push-force
+    applies_to: [shell]
+    match:
+      kind: regex
+      field: command
+      pattern: '\bgit\s+push\s+.*--force\b'
+    decision: warn
+    message: "Force pushing to git repository."
+
+  - id: network-allowlist
     applies_to: [shell]
     match:
       kind: domain_allowlist
       field: command
-      allowed_domains: ["github.com", "api.github.com", "registry.npmjs.org", "pypi.org"]
+      allowed_domains:
+        - github.com
+        - api.github.com
+        - files.pythonhosted.org
     decision: deny
-    message: "Command contains an unapproved network domain."
-  - id: size.large-write
-    applies_to: [write]
-    match:
-      kind: max_size
-      field: content
-      max_lines: 500
-    decision: warn
-    message: "Write exceeds 500 lines."
+    message: "Connection to unauthorized domain."

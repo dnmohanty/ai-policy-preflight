@@ -1,8 +1,12 @@
 import re
 import fnmatch
 import math
-from urllib.parse import urlparse
 from preflight.models import Match
+
+TOKEN = re.compile(r"[A-Za-z0-9+=_\-]+")
+TOOLS = re.compile(r"\b(?:curl|wget|nc|ncat|scp|rsync|ssh|sftp|ftp|telnet)\b|\bgit\s+(?:clone|fetch|pull|push)\b")
+TLDS = "com|net|org|io|dev|ai|co|xyz|ru|cn|info|biz|app|me|tk|top|cc|in|us|uk|de|site|online|cloud|link"
+HOST = re.compile(r"(?:[a-z][a-z0-9+.\-]*://)?(?:[\w.\-]+@)?((?:[a-z0-9\-]+\.)+(?:%s)|(?:\d{1,3}\.){3}\d{1,3})(?=$|[:/\s?#])" % TLDS, re.I)
 
 def _shannon_entropy(data: str) -> float:
     if not data:
@@ -13,34 +17,43 @@ def _shannon_entropy(data: str) -> float:
         entropy -= p_x * math.log2(p_x)
     return entropy
 
+def glob_match(pattern: str, path: str) -> bool:
+    pat = pattern.lower()
+    parts = [s for s in path.replace("\\", "/").lower().split("/") if s not in ("", ".", "..")]
+    for i in range(len(parts)):
+        segment = "/".join(parts[i:])
+        if fnmatch.fnmatchcase(segment, pat) or segment.startswith(pat):
+            return True
+    return False
+
+def entropy_hit(text: str, threshold: float, min_len: int) -> bool:
+    return any(len(t) >= min_len and _shannon_entropy(t) >= threshold for t in TOKEN.findall(text))
+
+def hosts(cmd: str) -> list:
+    if not TOOLS.search(cmd):
+        return []
+    res = []
+    for tok in cmd.split():
+        if not tok.startswith("-"):
+            m = HOST.match(tok)
+            if m:
+                res.append(m.group(1).lower())
+    return res
+
+def blocked(cmd: str, allowed: list) -> list:
+    return [h for h in hosts(cmd) if not any(h == d or h.endswith("." + d) for d in allowed)]
+
 def evaluate_match(match: Match, field_value: str) -> bool:
     if not field_value:
         return False
     if match.kind == "regex":
-        try:
-            return bool(re.search(match.pattern, field_value))
-        except re.error:
-            return False
+        return bool(re.search(match.pattern, field_value))
     elif match.kind == "glob":
-        return fnmatch.fnmatch(field_value, match.pattern)
+        return glob_match(match.pattern, field_value)
     elif match.kind == "entropy":
-        if len(field_value) < match.min_length:
-            return False
-        return _shannon_entropy(field_value) >= match.threshold
+        return entropy_hit(field_value, match.threshold, match.min_length)
     elif match.kind == "domain_allowlist":
-        urls = re.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', field_value)
-        if not urls:
-            return False
-        for url in urls:
-            if not url.startswith("http"):
-                url = "http://" + url
-            try:
-                host = urlparse(url).hostname
-                if host and host not in match.allowed_domains:
-                    return True
-            except Exception:
-                return True
-        return False
+        return bool(blocked(field_value, match.allowed_domains))
     elif match.kind == "max_size":
         lines = field_value.splitlines()
         return len(lines) > match.max_lines

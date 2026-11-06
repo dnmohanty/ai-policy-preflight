@@ -9,23 +9,23 @@ from preflight.audit import write_audit_log
 from preflight.evaluation import evaluate_corpus
 from preflight.hooks import handle_claude_code, handle_git_pre_commit
 
-def load_policy(path: str) -> Policy:
+def load_policy(path: str, exit_code: int = 65) -> Policy:
     try:
         with open(path, "r") as f:
             data = yaml.safe_load(f)
         return Policy(**data)
     except FileNotFoundError:
         print(f"Error: Policy file {path} not found.", file=sys.stderr)
-        sys.exit(65)
+        sys.exit(exit_code)
     except ValidationError as e:
         print(f"Policy validation error in {path}:", file=sys.stderr)
         for err in e.errors():
             loc = " -> ".join(map(str, err['loc']))
             print(f"  {loc}: {err['msg']}", file=sys.stderr)
-        sys.exit(65)
+        sys.exit(exit_code)
     except yaml.YAMLError as e:
         print(f"YAML parsing error in {path}: {e}", file=sys.stderr)
-        sys.exit(65)
+        sys.exit(exit_code)
 
 def check_action(args):
     policy = load_policy(args.policy)
