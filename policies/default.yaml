@@ -1,6 +1,7 @@
 version: 1
 default_decision: allow
 normalizers:
+  - nfkc
   - collapse_whitespace
   - strip_shell_quotes
   - decode_base64
@@ -12,7 +13,7 @@ rules:
       field: body
       threshold: 4.2
       min_length: 32
-    decision: deny
+    decision: warn
     message: "High entropy string detected (possible secret)."
 
   - id: aws-key
@@ -23,6 +24,15 @@ rules:
       pattern: 'AKIA[0-9A-Z]{16}'
     decision: deny
     message: "AWS Access Key detected."
+    
+  - id: private-key-header
+    applies_to: [shell, write, prompt]
+    match:
+      kind: regex
+      field: body
+      pattern: '-----BEGIN.*PRIVATE KEY-----'
+    decision: deny
+    message: "Private key material detected."
 
   - id: protect-env
     applies_to: [write]
@@ -32,6 +42,15 @@ rules:
       pattern: '.env'
     decision: deny
     message: "Writing to .env files is blocked."
+
+  - id: shell-redirect-env
+    applies_to: [shell]
+    match:
+      kind: regex
+      field: command
+      pattern: '>\s*(?:.*\.env)'
+    decision: deny
+    message: "Shell redirect to .env file blocked."
 
   - id: protect-github-workflows
     applies_to: [write]
@@ -50,6 +69,15 @@ rules:
       pattern: '.ssh/*'
     decision: deny
     message: "Writing to .ssh directory is blocked."
+
+  - id: shell-redirect-ssh
+    applies_to: [shell]
+    match:
+      kind: regex
+      field: command
+      pattern: '>\s*(?:.*\.ssh/)'
+    decision: deny
+    message: "Shell redirect to .ssh directory blocked."
 
   - id: protect-pem-keys
     applies_to: [write]
@@ -132,5 +160,7 @@ rules:
         - github.com
         - api.github.com
         - files.pythonhosted.org
+        - pypi.org
+        - registry.npmjs.org
     decision: deny
     message: "Connection to unauthorized domain."

@@ -27,7 +27,12 @@ def glob_match(pattern: str, path: str) -> bool:
     return False
 
 def entropy_hit(text: str, threshold: float, min_len: int) -> bool:
-    return any(len(t) >= min_len and _shannon_entropy(t) >= threshold for t in TOKEN.findall(text))
+    for t in TOKEN.findall(text):
+        if t.lower().startswith(("sha256-", "sha384-", "sha512-")):
+            continue
+        if len(t) >= min_len and _shannon_entropy(t) >= threshold:
+            return True
+    return False
 
 def hosts(cmd: str) -> list:
     if not TOOLS.search(cmd):
