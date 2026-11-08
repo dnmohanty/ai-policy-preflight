@@ -6,7 +6,8 @@ from preflight.models import Match
 TOKEN = re.compile(r"[A-Za-z0-9+=_\-]+")
 TOOLS = re.compile(r"\b(?:curl|wget|nc|ncat|scp|rsync|ssh|sftp|ftp|telnet)\b|\bgit\s+(?:clone|fetch|pull|push)\b")
 TLDS = "com|net|org|io|dev|ai|co|xyz|ru|cn|info|biz|app|me|tk|top|cc|in|us|uk|de|site|online|cloud|link"
-HOST = re.compile(r"(?:[a-z][a-z0-9+.\-]*://)?(?:[\w.\-]+@)?((?:[a-z0-9\-]+\.)+(?:%s)|(?:\d{1,3}\.){3}\d{1,3})(?=$|[:/\s?#])" % TLDS, re.I)
+HOST = re.compile(r"(?:[a-z][a-z0-9+.\-]*://)?(?:[\w.\-]+@)?((?:[a-z0-9\-]+\.)+(?:{})|(?:\d{{1,3}}\.){{3}}\d{{1,3}})(?=$|[:/\s?#])".format(TLDS), re.IGNORECASE)
+SRI = re.compile(r"\bsha(?:256|384|512)-[A-Za-z0-9+/=]+")
 
 def _shannon_entropy(data: str) -> float:
     if not data:
@@ -27,9 +28,8 @@ def glob_match(pattern: str, path: str) -> bool:
     return False
 
 def entropy_hit(text: str, threshold: float, min_len: int) -> bool:
+    text = SRI.sub(" ", text)  # drop whole integrity hashes first (they contain "/")
     for t in TOKEN.findall(text):
-        if t.lower().startswith(("sha256-", "sha384-", "sha512-")):
-            continue
         if len(t) >= min_len and _shannon_entropy(t) >= threshold:
             return True
     return False
