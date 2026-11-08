@@ -2,7 +2,8 @@
 
 A local, deterministic policy gate for AI coding agents. Before an agent runs a shell command, writes a file or sends a prompt, Preflight checks that action against a YAML policy and answers `allow`, `warn` or `deny`. It uses pattern rules only: no model, no network calls.
 
-<!-- Demo GIF: the hook blocking a real agent action. Drag it in here. -->
+<img width="1200" height="567" alt="preflight_demo" src="https://github.com/user-attachments/assets/9f9ae1a0-9307-4a43-bfc5-3fcec7ac49ed" />
+
 
 > **Not a sandbox.** Preflight is a best-effort pattern gate. It can be bypassed by obfuscation, and it only protects you if the agent actually calls it. See [Limitations](#limitations) for exactly what it misses.
 
