@@ -30,28 +30,34 @@ rules:
     match:
       kind: regex
       field: body
-      pattern: '-----BEGIN.*PRIVATE KEY-----'
+      pattern: '-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----\s*[A-Za-z0-9+/=]{16,}'
     decision: deny
     message: "Private key material detected."
 
+  - id: api-key-prefixes
+    applies_to: [shell, write, prompt]
+    match:
+      kind: regex
+      field: body
+      pattern: '\bgh[pousr]_[A-Za-z0-9]{30,}|\bgithub_pat_[A-Za-z0-9_]{22,}|\bsk-(?:proj-|ant-)?[A-Za-z0-9_\-]{20,}|\bxox[abprs]-[A-Za-z0-9-]{10,}'
+    decision: deny
+    message: "Looks like an API token (GitHub, OpenAI/Anthropic-style, Slack)."
   - id: protect-env
     applies_to: [write]
     match:
-      kind: glob
+      kind: regex
       field: path
-      pattern: '.env'
+      pattern: '(?i)(?:^|[\\/])\.env(?:\.(?!(?:example|sample|template)$)[^\\/]*)?$'
     decision: deny
-    message: "Writing to .env files is blocked."
-
-  - id: shell-redirect-env
+    message: "Writing to .env files is blocked (.env.example/.sample/.template are allowed)."
+  - id: shell-write-env
     applies_to: [shell]
     match:
       kind: regex
       field: command
-      pattern: '>\s*(?:.*\.env)'
+      pattern: '(?i)(?:>>?|\btee\b(?:\s+-a)?|\b(?:cp|mv|install)\b|\bsed\s+-i\S*|\bdd\b[^|;&\n]*\bof=)[^|;&\n]*(?:^|[\s/=])\.env(?:\.(?!(?:example|sample|template)(?:\s|$|[;&|]))\w+)?(?=\s|$|[;&|])'
     decision: deny
-    message: "Shell redirect to .env file blocked."
-
+    message: "Shell command writes to a .env file."
   - id: protect-github-workflows
     applies_to: [write]
     match:
@@ -70,15 +76,14 @@ rules:
     decision: deny
     message: "Writing to .ssh directory is blocked."
 
-  - id: shell-redirect-ssh
+  - id: shell-write-ssh
     applies_to: [shell]
     match:
       kind: regex
       field: command
-      pattern: '>\s*(?:.*\.ssh/)'
+      pattern: '(?:>>?|\btee\b|\b(?:cp|mv|install)\b|\bsed\s+-i\S*)[^|;&\n]*\.ssh/'
     decision: deny
-    message: "Shell redirect to .ssh directory blocked."
-
+    message: "Shell command writes into a .ssh directory."
   - id: protect-pem-keys
     applies_to: [write]
     match:
@@ -147,10 +152,9 @@ rules:
     match:
       kind: regex
       field: command
-      pattern: '\bgit\s+push\s+.*--force\b'
+      pattern: '\bgit\s+push\b[^|;&\n]*\s(?:--force(?![-\w])|-[a-zA-Z]*f[a-zA-Z]*(?=\s|$))'
     decision: warn
     message: "Force pushing to git repository."
-
   - id: network-allowlist
     applies_to: [shell]
     match:

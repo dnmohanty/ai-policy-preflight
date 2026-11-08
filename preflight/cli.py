@@ -85,7 +85,8 @@ def main():
     eval_parser.add_argument("--corpus", required=True)
     eval_parser.add_argument("--policy", required=True)
     eval_parser.add_argument("--json")
-    eval_parser.set_defaults(func=lambda a: evaluate_corpus(a.corpus, a.policy, a.json))
+    eval_parser.add_argument("--md", help="write the results table to this markdown file")
+    eval_parser.set_defaults(func=lambda a: evaluate_corpus(a.corpus, a.policy, a.json, a.md))
 
     hook_parser = subparsers.add_parser("hook")
     hook_parser.add_argument("agent", choices=["claude-code"])

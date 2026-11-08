@@ -4,7 +4,7 @@ import glob
 from collections import defaultdict
 from preflight.engine import evaluate_action
 
-def evaluate_corpus(corpus_dir: str, policy_path: str, output_json: str = None):
+def evaluate_corpus(corpus_dir: str, policy_path: str, output_json: str = None, output_md: str = None):
     from preflight.cli import load_policy 
     
     policy = load_policy(policy_path)
@@ -50,43 +50,55 @@ def evaluate_corpus(corpus_dir: str, policy_path: str, output_json: str = None):
                     if check_caught(res_on, expected_decision, expected_rule):
                         stats[rule_class]["malicious_caught"] += 1
                     else:
-                        misses.append({"id": case.get("id"), "class": rule_class, "reason": "Missed malicious"})
+                        misses.append({"id": case.get("id"), "class": rule_class, "reason": "Missed malicious", "note": case.get("note", "")})
                 
                 elif category == "benign":
                     stats[rule_class]["benign"] += 1
                     if is_flagged_on:
                         stats[rule_class]["benign_flagged"] += 1
-                        false_positives.append({"id": case.get("id"), "class": rule_class, "reason": "Flagged benign"})
+                        false_positives.append({"id": case.get("id"), "class": rule_class, "reason": "Flagged benign", "note": case.get("note", "")})
                 
                 elif category == "hard_negative":
                     stats[rule_class]["hard_negative"] += 1
                     if is_flagged_on:
                         stats[rule_class]["hard_negative_flagged"] += 1
-                        false_positives.append({"id": case.get("id"), "class": rule_class, "reason": "Flagged hard negative"})
+                        false_positives.append({"id": case.get("id"), "class": rule_class, "reason": "Flagged hard negative", "note": case.get("note", "")})
                 
                 elif category == "evasive":
                     stats[rule_class]["evasive"] += 1
                     if check_caught(res_on, expected_decision, expected_rule):
                         stats[rule_class]["evasive_caught_on"] += 1
                     else:
-                        misses.append({"id": case.get("id"), "class": rule_class, "reason": "Missed evasive (ON)"})
+                        misses.append({"id": case.get("id"), "class": rule_class, "reason": "Missed evasive (ON)", "note": case.get("note", "")})
                     
                     if check_caught(res_off, expected_decision, expected_rule):
                         stats[rule_class]["evasive_caught_off"] += 1
 
-    print(f"{'Class':<20} | {'Malicious (TPR)':<15} | {'Benign (FPR)':<14} | {'Hard Neg (FPR)':<14} | {'Evasive (ON)':<12} | {'Evasive (OFF)'}")
-    print("-" * 100)
-    for c, s in stats.items():
-        tpr = f"{s['malicious_caught']}/{s['malicious']}" if s['malicious'] else "N/A"
-        fpr = f"{s['benign_flagged']}/{s['benign']}" if s['benign'] else "N/A"
-        hn_fpr = f"{s['hard_negative_flagged']}/{s['hard_negative']}" if s['hard_negative'] else "N/A"
-        ev_on = f"{s['evasive_caught_on']}/{s['evasive']}" if s['evasive'] else "N/A"
-        ev_off = f"{s['evasive_caught_off']}/{s['evasive']}" if s['evasive'] else "N/A"
-        print(f"{c:<20} | {tpr:<15} | {fpr:<14} | {hn_fpr:<14} | {ev_on:<12} | {ev_off}")
-    
-    print("\nMisses:", [m.get("id") for m in misses])
-    print("False Positives:", [fp.get("id") for fp in false_positives])
-    
+    lines = [f"Corpus: {corpus_dir}  |  Policy: {policy_path}", "",
+             "| Class | Malicious detected | Benign flagged | Hard-negative flagged | Evasive (norm ON) | Evasive (norm OFF) |",
+             "|---|---|---|---|---|---|"]
+    tot = defaultdict(int)
+    for c, s_ in sorted(stats.items()):
+        for k, v in s_.items():
+            tot[k] += v
+        def frac(a, b):
+            return f"{s_[a]}/{s_[b]}" if s_[b] else "-"
+        lines.append(f"| {c} | {frac('malicious_caught','malicious')} | {frac('benign_flagged','benign')} | "
+                     f"{frac('hard_negative_flagged','hard_negative')} | {frac('evasive_caught_on','evasive')} | {frac('evasive_caught_off','evasive')} |")
+    def tfrac(a, b):
+        return f"{tot[a]}/{tot[b]}" if tot[b] else "-"
+    lines.append(f"| **TOTAL** | {tfrac('malicious_caught','malicious')} | {tfrac('benign_flagged','benign')} | "
+                 f"{tfrac('hard_negative_flagged','hard_negative')} | {tfrac('evasive_caught_on','evasive')} | {tfrac('evasive_caught_off','evasive')} |")
+    lines += ["", f"Cases: {sum(tot[k] for k in ('malicious','benign','hard_negative','evasive'))}", "", "### Misses"]
+    lines += [f"- `{m['id']}` ({m['class']}): {m['reason']}. {m['note']}" for m in misses] or ["- none"]
+    lines += ["", "### False positives"]
+    lines += [f"- `{f['id']}` ({f['class']}): {f['reason']}. {f['note']}" for f in false_positives] or ["- none"]
+    text = "\n".join(lines)
+    print(text)
+    if output_md:
+        with open(output_md, "w") as f:
+            f.write(text + "\n")
+
     if output_json:
         with open(output_json, "w") as f:
             json.dump({"stats": stats, "misses": misses, "false_positives": false_positives}, f, indent=2)

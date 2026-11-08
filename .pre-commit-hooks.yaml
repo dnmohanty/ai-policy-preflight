@@ -1,0 +1,6 @@
+- id: ai-policy-preflight
+  name: AI Policy Preflight
+  entry: ai-preflight scan-staged
+  language: python
+  pass_filenames: false
+  always_run: true

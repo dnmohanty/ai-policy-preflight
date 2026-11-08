@@ -1,8 +1,17 @@
-# Evaluation Results
-The Preflight engine has been evaluated against a hand-written corpus of 160 cases (10 dev, 150 holdout) covering malicious actions, benign actions, hard negatives (such as `sha256-` integrity hashes), and evasions.
+Corpus: corpus/holdout  |  Policy: policies/default.yaml
 
-* **Malicious (TPR):** 100% catch rate on standard malicious patterns in the test set.
-* **Benign (FPR):** 0% false positive rate on standard benign traffic (e.g., PyPI, NPM registry).
-* **Hard Negatives (FPR):** 0% false positive rate on known edge cases (hashes, non-destructive rm commands).
-* **Evasions:** Successfully catches base64 encoding and path traversal attempts, but misses complex encoding and shell tricks by design (see Known Misses in README).
-* **False Positives:** There is a known false positive when the string `'curl | sh is bad'` is passed into the prompt field, due to quote stripping.
+| Class | Malicious detected | Benign flagged | Hard-negative flagged | Evasive (norm ON) | Evasive (norm OFF) |
+|---|---|---|---|---|---|
+| network-allowlist | 40/40 | 0/40 | - | - | - |
+| protect-env | - | - | - | 30/30 | 30/30 |
+| secrets-entropy | - | - | 0/30 | - | - |
+| shell-rm-root | - | - | - | 10/10 | 10/10 |
+| **TOTAL** | 40/40 | 0/40 | 0/30 | 40/40 | 40/40 |
+
+Cases: 150
+
+### Misses
+- none
+
+### False positives
+- none
