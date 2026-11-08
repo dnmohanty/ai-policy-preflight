@@ -73,6 +73,8 @@ def evaluate_corpus(corpus_dir: str, policy_path: str, output_json: str = None, 
                     
                     if check_caught(res_off, expected_decision, expected_rule):
                         stats[rule_class]["evasive_caught_off"] += 1
+                else:
+                    raise ValueError(f"Unknown category {category!r} in case {case.get('id')}")
 
     lines = [f"Corpus: {corpus_dir}  |  Policy: {policy_path}", "",
              "| Class | Malicious detected | Benign flagged | Hard-negative flagged | Evasive (norm ON) | Evasive (norm OFF) |",

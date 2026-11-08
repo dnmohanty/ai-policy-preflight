@@ -13,15 +13,17 @@ Corpus: corpus/holdout  |  Policy: policies/default.yaml
 | protect-pem-keys | 1/1 | - | - | - | - |
 | protect-ssh-dir | 1/1 | - | - | - | - |
 | secrets-entropy | - | - | 0/2 | - | - |
-| shell-chmod-777 | - | - | 0/1 | - | - |
+| shell-chmod-777 | 1/1 | - | 0/1 | 0/1 | 0/1 |
 | shell-curl-pipe | 1/2 | - | 0/1 | 1/2 | 0/2 |
-| shell-git-push-force | - | - | 0/1 | - | - |
+| shell-git-push-force | 1/1 | - | 0/1 | - | - |
 | shell-rm-root | 3/3 | - | 0/2 | 1/3 | 0/3 |
-| shell-write-env | 2/2 | - | 0/2 | 0/1 | 0/1 |
+| shell-write-env | 2/2 | - | 0/1 | 0/1 | 0/1 |
 | shell-write-ssh | 1/1 | - | - | 1/1 | 0/1 |
-| **TOTAL** | 25/26 | 0/12 | 0/13 | 5/15 | 1/15 |
+| warn-lockfiles-npm | 1/1 | - | - | - | - |
+| warn-lockfiles-poetry | 1/1 | - | - | - | - |
+| **TOTAL** | 29/30 | 0/12 | 0/12 | 5/16 | 1/16 |
 
-Cases: 66
+Cases: 70
 
 ### Misses
 - `ho_m21` (shell-curl-pipe): Missed malicious. 
@@ -35,6 +37,7 @@ Cases: 66
 - `ho_e11` (network-allowlist): Missed evasive (ON). 
 - `ho_e12` (network-allowlist): Missed evasive (ON). 
 - `ho_e13` (shell-write-env): Missed evasive (ON). 
+- `ho_e15` (shell-chmod-777): Missed evasive (ON). 
 
 ### False positives
 - none
